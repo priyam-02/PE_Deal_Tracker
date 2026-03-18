@@ -1,5 +1,6 @@
 import TelegramBot from "node-telegram-bot-api";
 import config from "./config.js";
+import { searchFirmDeals } from "./searcher.js";
 
 class DealNotifier {
   constructor(logger, dealStore) {
@@ -25,7 +26,9 @@ class DealNotifier {
           `I monitor press releases from PR Newswire, BusinessWire, and GlobeNewsWire ` +
           `for Private Equity M&A activity.\n\n` +
           `*Commands:*\n` +
-          `/fetch — Scan all feeds now and send new deals\n` +
+          `/fetch — Scan all feeds now and show today's deals\n` +
+          `/today — Show all PE deals found today\n` +
+          `/search [firm] — Search the web for deals by a firm\n` +
           `/status — Bot status and stats\n` +
           `/recent — Last 5 deals found\n` +
           `/chatid — Show your chat ID\n\n` +
@@ -47,19 +50,23 @@ class DealNotifier {
 
       try {
         const result = await this._onFetch(chatId);
-        const { candidates, newArticles, deals } = result;
+        const { candidates, newArticles, deals: newDeals } = result;
+
+        // Get ALL deals found today (including from earlier scans)
+        const todayDeals = this.store.getTodayDeals();
 
         let summary = `✅ *Scan Complete*\n\n`;
-        summary += `📰 Candidate articles found: ${candidates}\n`;
-        summary += `🆕 New articles analyzed: ${newArticles}\n`;
-        summary += `🤝 PE deals identified: ${deals.length}\n`;
+        summary += `📰 Candidate articles in feeds: ${candidates}\n`;
+        summary += `🆕 New articles just analyzed: ${newArticles}\n`;
+        summary += `🤝 New PE deals just found: ${newDeals.length}\n`;
+        summary += `📅 *Total PE deals today: ${todayDeals.length}*\n`;
 
-        if (deals.length === 0) {
-          summary += `\n_No new PE deals found in this scan._`;
+        if (todayDeals.length === 0) {
+          summary += `\n_No PE deals found today yet._`;
           this.bot.sendMessage(chatId, summary, { parse_mode: "Markdown" });
         } else {
           this.bot.sendMessage(chatId, summary, { parse_mode: "Markdown" });
-          for (const deal of deals) {
+          for (const deal of todayDeals) {
             await this._sendDealMessage(chatId, deal);
             await new Promise((r) => setTimeout(r, 500));
           }
@@ -67,6 +74,74 @@ class DealNotifier {
       } catch (err) {
         this.log.error("Fetch command failed:", err.message);
         this.bot.sendMessage(chatId, `❌ Scan failed: ${err.message}`);
+      }
+    });
+
+    // /today — show all deals found today
+    this.bot.onText(/\/today/, async (msg) => {
+      const chatId = msg.chat.id;
+      const todayDeals = this.store.getTodayDeals();
+
+      if (todayDeals.length === 0) {
+        this.bot.sendMessage(chatId, "📅 No PE deals found today yet. Try /fetch to scan now.");
+        return;
+      }
+
+      this.bot.sendMessage(chatId, `📅 *${todayDeals.length} PE deal(s) found today:*`, {
+        parse_mode: "Markdown",
+      });
+      for (const deal of todayDeals) {
+        await this._sendDealMessage(chatId, deal);
+        await new Promise((r) => setTimeout(r, 500));
+      }
+    });
+
+    // /search [firm] — search the web for deals by a specific firm
+    this.bot.onText(/\/search(?:\s+(.+))?/, async (msg, match) => {
+      const chatId = msg.chat.id;
+      const firmName = match?.[1]?.trim();
+
+      if (!firmName) {
+        this.bot.sendMessage(
+          chatId,
+          `Usage: \`/search [firm name]\`\n\nExamples:\n` +
+            `/search Blackstone\n` +
+            `/search KKR\n` +
+            `/search Apollo Global\n` +
+            `/search Thoma Bravo`,
+          { parse_mode: "Markdown" }
+        );
+        return;
+      }
+
+      this.bot.sendMessage(chatId, `🔎 Searching the web for *${firmName}* deals... this may take a minute.`, {
+        parse_mode: "Markdown",
+      });
+
+      try {
+        const { articles, deals } = await searchFirmDeals(firmName, this.log);
+
+        let summary = `✅ *Search Complete: ${firmName}*\n\n`;
+        summary += `📰 News articles found: ${articles}\n`;
+        summary += `🤝 PE deals identified: ${deals.length}\n`;
+
+        if (deals.length === 0) {
+          summary += `\n_No confirmed PE deals found for "${firmName}"._`;
+          summary += `\n_Try a different spelling or a broader name._`;
+          this.bot.sendMessage(chatId, summary, { parse_mode: "Markdown" });
+        } else {
+          this.bot.sendMessage(chatId, summary, { parse_mode: "Markdown" });
+          for (const deal of deals) {
+            await this._sendDealMessage(chatId, {
+              ...deal,
+              source: deal.source || "Web Search",
+            });
+            await new Promise((r) => setTimeout(r, 500));
+          }
+        }
+      } catch (err) {
+        this.log.error("Search command failed:", err.message);
+        this.bot.sendMessage(chatId, `❌ Search failed: ${err.message}`);
       }
     });
 

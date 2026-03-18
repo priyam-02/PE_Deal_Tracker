@@ -212,3 +212,17 @@ network_policies:
               path: /RssFeed/**
     binaries:
       - path: /usr/local/bin/node
+  google_news:
+    name: google_news
+    endpoints:
+      - host: news.google.com
+        port: 443
+        protocol: rest
+        tls: terminate
+        enforcement: enforce
+        rules:
+          - allow:
+              method: GET
+              path: /rss/**
+    binaries:
+      - path: /usr/local/bin/node

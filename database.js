@@ -114,6 +114,17 @@ class DealStore {
     this._save();
   }
 
+  getTodayDeals() {
+    const result = this.db.exec("SELECT * FROM deals WHERE date(created_at) = date('now') ORDER BY created_at DESC");
+    if (result.length === 0) return [];
+    const cols = result[0].columns;
+    return result[0].values.map(row => {
+      const obj = {};
+      cols.forEach((col, i) => { obj[col] = row[i]; });
+      return obj;
+    });
+  }
+
   getStats() {
     const totalArticles = this.db.exec("SELECT COUNT(*) as c FROM seen_articles")[0]?.values[0][0] || 0;
     const totalDeals = this.db.exec("SELECT COUNT(*) as c FROM deals")[0]?.values[0][0] || 0;

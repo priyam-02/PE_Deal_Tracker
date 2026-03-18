@@ -1,0 +1,5 @@
+node_modules/
+.env
+deals.db
+pe-tracker.log
+pe-tracker.pid

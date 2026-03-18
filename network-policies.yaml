@@ -1,0 +1,82 @@
+# ──────────────────────────────────────────────────────────
+# ADDITIONAL NETWORK POLICIES FOR PE DEAL TRACKER
+# ──────────────────────────────────────────────────────────
+#
+# Add these to your nemoclaw sandbox policy config.
+# These allow the bot to fetch RSS feeds from the 3 wire services.
+#
+# Command to apply (adjust based on your nemoclaw CLI):
+#   nemoclaw jarvis policy update --file network-policies.yaml
+#
+# Or add manually via:
+#   nemoclaw jarvis policy add-endpoint ...
+# ──────────────────────────────────────────────────────────
+
+network_policies:
+  prnewswire:
+    name: prnewswire
+    endpoints:
+      - host: www.prnewswire.com
+        port: 443
+        protocol: rest
+        tls: terminate
+        enforcement: enforce
+        rules:
+          - allow:
+              method: GET
+              path: /rss/**
+    binaries:
+      - path: /usr/local/bin/node
+
+  businesswire:
+    name: businesswire
+    endpoints:
+      - host: www.businesswire.com
+        port: 443
+        protocol: rest
+        tls: terminate
+        enforcement: enforce
+        rules:
+          - allow:
+              method: GET
+              path: /**
+      - host: feed.businesswire.com
+        port: 443
+        protocol: rest
+        tls: terminate
+        enforcement: enforce
+        rules:
+          - allow:
+              method: GET
+              path: /rss/**
+    binaries:
+      - path: /usr/local/bin/node
+
+  globenewswire:
+    name: globenewswire
+    endpoints:
+      - host: www.globenewswire.com
+        port: 443
+        protocol: rest
+        tls: terminate
+        enforcement: enforce
+        rules:
+          - allow:
+              method: GET
+              path: /RssFeed/**
+    binaries:
+      - path: /usr/local/bin/node
+
+  # OPTIONAL: Also whitelist PyPI if you need Python packages later
+  # pypi:
+  #   name: pypi
+  #   endpoints:
+  #     - host: pypi.org
+  #       port: 443
+  #       access: full
+  #     - host: files.pythonhosted.org
+  #       port: 443
+  #       access: full
+  #   binaries:
+  #     - path: /usr/bin/pip
+  #     - path: /usr/bin/pip3

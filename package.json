@@ -2,14 +2,14 @@
   "name": "pe-deal-tracker",
   "version": "1.0.0",
   "description": "Tracks PE M&A deals from press releases and sends Telegram alerts",
-  "main": "src/index.js",
+  "main": "index.js",
   "type": "module",
   "scripts": {
-    "start": "node src/index.js",
-    "test": "node src/test-run.js"
+    "start": "node index.js",
+    "test": "node test-run.js"
   },
   "dependencies": {
-    "better-sqlite3": "^11.7.0",
+    "sql.js": "^1.11.0",
     "dotenv": "^17.3.1",
     "node-telegram-bot-api": "^0.66.0",
     "rss-parser": "^3.13.0"

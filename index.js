@@ -88,6 +88,9 @@ log.info(`   Sources:  PR Newswire, BusinessWire, GlobeNewsWire`);
 log.info(`   Chat ID:  ${config.telegram.chatId}`);
 log.info("");
 
+// Wait for async DB init before starting
+await store.ready();
+
 // Run first cycle immediately
 pollCycle();
 
